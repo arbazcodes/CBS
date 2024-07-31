@@ -3,34 +3,46 @@
 
 #include <vector>
 #include <utility>
+#include <optional>
 #include "astar.h"
 #include <queue>
 
-using namespace std;
+// Alias for cost path
+using CostPath = std::vector<std::vector<int>>;
 
-typedef vector<vector<int>> CostPath;
-
-struct CBSNode {
-    vector<CostPath> solution;
-    vector<Constraint> constraints;
+// CBSNode structure definition
+struct CbsNode {
+    std::vector<CostPath> solution;
+    std::vector<Constraint> constraints;
     int cost;
 
-    bool operator<(const CBSNode& other) const {
+    bool operator<(const CbsNode& other) const {
         return cost > other.cost;
     }
 };
 
-class cbs
-{
+// CBS class definition
+class Cbs {
 public:
-    vector<vector<int>> Grid;
+    // Constructor
+    explicit Cbs(const std::vector<std::vector<int>>& grid);
 
-    cbs(vector<vector<int>> grid);
-    int findTotalCost(vector<CostPath> Solution);
-    vector<vector<int>> findConflicts(vector<CostPath> Solution);
-    vector<Constraint> generateConstraints(vector<vector<int>> Conflicts);
-    vector<CostPath> low_level(vector<Pair> sources, vector<Pair> destinatoins, const vector<Constraint>& constraints);
-    vector<CostPath> high_level(vector<Pair> sources, vector<Pair> destinations);
+    // Member functions
+    int FindTotalCost(const std::vector<CostPath>& solution) const;
+    std::vector<std::vector<int>> FindConflicts(const std::vector<CostPath>& solution) const;
+    std::vector<Constraint> GenerateConstraints(const std::vector<std::vector<int>>& conflicts) const;
+    std::vector<CostPath> LowLevel(
+        const std::vector<Pair>& sources,
+        const std::vector<Pair>& destinations,
+        const std::vector<Constraint>& constraints
+    ) const;
+    std::vector<CostPath> HighLevel(
+        const std::vector<Pair>& sources,
+        const std::vector<Pair>& destinations
+    ) const;
+
+private:
+    std::vector<std::vector<int>> grid;
 };
 
- #endif
+#endif  // CBS_H
