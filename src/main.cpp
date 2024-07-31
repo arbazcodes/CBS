@@ -2,7 +2,7 @@
 #include "cbs.h"
 
 int main() {
-    vector<Pair> starts = {{0, 0}, {2, 0}, {2, 2}};
+    vector<Pair> starts = {{1, 0}, {2, 0}, {2, 2}};
     vector<Pair> goals = {{2, 0}, {1, 0}, {0, 0}};
     
     vector<Constraint> constraints = {};
@@ -21,7 +21,7 @@ int main() {
     for (size_t i = 0; i < starts.size(); i++) {
         std::cout << "Agent " << i << " - Cost: " << solution[i].size() << " Path: ";
         for (const auto& step : solution[i]) {
-            std::cout << "(" << step[0] << ", " << step[1] << ", " << step[2] << ") ";
+            std::cout << "(" << step[0] << ", " << step[1] << ", " << step[2] <<", "<< step[3] <<  ") ";
         }
         std::cout << std::endl;
     }

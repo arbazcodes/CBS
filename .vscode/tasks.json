@@ -11,7 +11,7 @@
               "-I./includes",
               "src/*.cpp",
               "-o",
-              "${workspaceFolder}\\astar.exe"
+              "${workspaceFolder}\\cbs.exe"
           ],
           "options": {
               "cwd": "${workspaceFolder}"
