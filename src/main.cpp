@@ -3,7 +3,7 @@
 
 int main() {
     // Define starting and goal positions for agents
-    std::vector<Pair> starts = {{1, 0}, {2, 0}, {2, 2}};
+    std::vector<Pair> starts = {{0, 0}, {0, 2}, {2, 2}};
     std::vector<Pair> goals = {{2, 0}, {1, 0}, {0, 0}};
     
     // Define constraints (empty in this case)
@@ -31,8 +31,12 @@ int main() {
     std::cout << "Final Solution Paths and Costs:" << std::endl;
     for (size_t i = 0; i < starts.size(); ++i) {
         std::cout << "Agent " << i << " - Cost: " << solution[i].size() << " Path: ";
+        int x = 0;
         for (const auto& step : solution[i]) {
-            std::cout << "(" << step[0] << ", " << step[1] << ", " << step[2] << ", " << step[3] << ") ";
+            std::cout << "(" << step[0] << ", " << step[1] << ", " << step[2] << ", " << step[3] << ")";
+            if(!(x == solution[i].size() - 1))
+                std::cout<<"--->";
+            x++;
         }
         std::cout << std::endl;
     }
