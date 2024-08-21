@@ -1,9 +1,5 @@
 #include "astar.h"
 #include <queue>
-#include <cmath>
-#include <algorithm>
-#include <map>
-#include <set>
 #include <iostream>
 
 // Function to calculate Manhattan distance
@@ -15,22 +11,23 @@ int ManhattanDistance(const Pair &a, const Pair &b)
 // Function to calculate the cost of rotation between two directions
 int RotationCost(Direction from, Direction to)
 {
-    // Define opposite directions
+    if (from == to)
+        return 0;
     if ((from == UP && to == DOWN) || (from == DOWN && to == UP) ||
         (from == LEFT && to == RIGHT) || (from == RIGHT && to == LEFT))
     {
-        return 0; // No rotation cost for opposite directions
+        return 1; // Cost for opposite directions
     }
-    return 1; // Default rotation cost
+    return 2; // Default rotation cost
 }
 
 // Function to get constraint time for a given position
-std::optional<int> GetConstraintTime(const Pair &position, const std::vector<std::vector<int>> &constraints)
+std::optional<int> GetConstraintTime(const Pair &position, const std::unordered_map<int, std::unordered_set<Pair>> &constraints)
 {
-    for (const auto &constraint : constraints)
+    for (const auto &entry : constraints)
     {
-        if (position.first == constraint[0] && position.second == constraint[1])
-            return constraint[2];
+        if (entry.second.find(position) != entry.second.end())
+            return entry.first;
     }
     return std::nullopt;
 }
@@ -40,62 +37,41 @@ std::vector<State> GetNeighbors(
     const State &current,
     const Pair &goal,
     const std::vector<std::vector<int>> &grid,
-    std::map<int, std::set<Pair>> vertex_constraint_map,
-    std::map<int, std::set<Pair>> edge_constraint_map,
-    std::vector<std::vector<int>> stopping_constraint_map,
-    std::map<int, std::set<Pair>> following_constraint_map)
+    const std::unordered_map<int, std::unordered_set<Pair>> &vertex_constraints,
+    const std::unordered_map<int, std::unordered_set<Pair>> &edge_constraints,
+    const std::unordered_map<int, std::unordered_set<Pair>> &following_constraints,
+    const std::unordered_map<int, std::unordered_set<Pair>> &stopping_constraints)
 {
     std::vector<State> neighbors;
-    std::vector<Pair> direction_vectors = {{0, 1}, {1, 0}, {0, -1}, {-1, 0}, {0, 0}};
-    std::vector<Direction> directions = {DOWN, RIGHT, UP, LEFT, STAY};
+    static const std::vector<Pair> direction_vectors = {{0, 1}, {1, 0}, {0, -1}, {-1, 0}, {0, 0}};
+    static const std::vector<Direction> directions = {DOWN, RIGHT, UP, LEFT, STAY};
 
-    for (int i = 0; i < directions.size(); ++i)
+    for (size_t i = 0; i < directions.size(); ++i)
     {
         Direction new_direction = directions[i];
         Pair direction_vector = direction_vectors[i];
         Pair next_cell = {current.position.first + direction_vector.first, current.position.second + direction_vector.second};
         int next_time_step = current.time_step + 1;
 
+        // Boundary and obstacle check
         if (next_cell.first < 0 || next_cell.first >= grid.size() || next_cell.second < 0 || next_cell.second >= grid[0].size() || grid[next_cell.first][next_cell.second] != 1)
-        {
             continue;
-        }
 
-        if (vertex_constraint_map.find(next_time_step) != vertex_constraint_map.end() &&
-            vertex_constraint_map[next_time_step].find(next_cell) != vertex_constraint_map[next_time_step].end())
-        {
+        // Constraint checks
+        if (vertex_constraints.count(next_time_step) && vertex_constraints.at(next_time_step).count(next_cell))
             continue;
-        }
-        if (edge_constraint_map.find(next_time_step) != edge_constraint_map.end() &&
-            edge_constraint_map[next_time_step].find(next_cell) != edge_constraint_map[next_time_step].end())
-        {
+        if (edge_constraints.count(next_time_step) && edge_constraints.at(next_time_step).count(next_cell))
             continue;
-        }
-        if (following_constraint_map.find(next_time_step) != following_constraint_map.end() &&
-            following_constraint_map[next_time_step].find(next_cell) != following_constraint_map[next_time_step].end())
-        {
+        if (following_constraints.count(next_time_step) && following_constraints.at(next_time_step).count(next_cell))
             continue;
-        }
-        bool is_stopping_constraint = false;
-        for (const auto &constraint : stopping_constraint_map)
-        {
-            if (next_cell.first == constraint[0] && next_cell.second == constraint[1] && next_time_step == constraint[2])
-            {
-                is_stopping_constraint = true;
-                break;
-            }
-        }
-        if (is_stopping_constraint)
-        {
+        if (stopping_constraints.count(next_time_step) && stopping_constraints.at(next_time_step).count(next_cell))
             continue;
-        }
 
-        // If moving in the opposite direction, keep the same direction
-        Direction current_direction = current.direction;
-        if ((current_direction == UP && new_direction == DOWN) || (current_direction == DOWN && new_direction == UP) ||
-            (current_direction == LEFT && new_direction == RIGHT) || (current_direction == RIGHT && new_direction == LEFT))
+        // Update direction if moving in opposite direction
+        if ((current.direction == UP && new_direction == DOWN) || (current.direction == DOWN && new_direction == UP) ||
+            (current.direction == LEFT && new_direction == RIGHT) || (current.direction == RIGHT && new_direction == LEFT))
         {
-            new_direction = current_direction; // Keep the same direction
+            new_direction = current.direction;
         }
 
         neighbors.push_back({next_cell, new_direction, next_time_step});
@@ -121,49 +97,33 @@ std::vector<std::vector<int>> AStarAlgorithm(
         open_list;
     open_list.push({0, {start, UP, 0}});
 
-    std::map<State, int> g_costs;
+    std::unordered_map<State, int> g_costs;
     g_costs[{start, UP, 0}] = 0;
 
-    std::map<State, State> came_from;
+    std::unordered_map<State, State> came_from;
 
-    std::map<int, std::set<Pair>> vertex_constraint_map;
-    std::map<int, std::set<Pair>> edge_constraint_map;
-    std::vector<std::vector<int>> stopping_constraint_map;
-    std::map<int, std::set<Pair>> following_constraint_map;
+    std::unordered_map<int, std::unordered_set<Pair>> vertex_constraints;
+    std::unordered_map<int, std::unordered_set<Pair>> edge_constraints;
+    std::unordered_map<int, std::unordered_set<Pair>> stopping_constraints;
+    std::unordered_map<int, std::unordered_set<Pair>> following_constraints;
 
     for (const auto &constraint : constraints)
     {
         if (constraint.type == 0)
         {
-            vertex_constraint_map[constraint.time].insert({constraint.x, constraint.y});
+            vertex_constraints[constraint.time].insert({constraint.x, constraint.y});
         }
         else if (constraint.type == 1)
         {
-            edge_constraint_map[constraint.time].insert({constraint.x, constraint.y});
+            edge_constraints[constraint.time].insert({constraint.x, constraint.y});
         }
         else if (constraint.type == 2)
         {
-            stopping_constraint_map.push_back({constraint.x, constraint.y, constraint.time});
+            stopping_constraints[constraint.time].insert({constraint.x, constraint.y});
         }
         else if (constraint.type == 3)
         {
-            following_constraint_map[constraint.time].insert({constraint.x, constraint.y});
-            // std::cout << "Following Constraints:" << std::endl;
-
-            // // Iterate over the map
-            // for (const auto &entry : following_constraint_map)
-            // {
-            //     int time_step = entry.first;
-            //     const std::set<Pair> &constraints = entry.second;
-
-            //     std::cout << "Time Step " << time_step << ":" << std::endl;
-
-            //     // Iterate over the set of pairs for this time step
-            //     for (const auto &pair : constraints)
-            //     {
-            //         std::cout << "  (" << pair.first << ", " << pair.second << ")" << std::endl;
-            //     }
-            // }
+            following_constraints[constraint.time].insert({constraint.x, constraint.y});
         }
     }
 
@@ -174,16 +134,16 @@ std::vector<std::vector<int>> AStarAlgorithm(
 
         if (current.position == goal)
         {
-            // Check if the current time step is less than the stopping constraint time
-            auto constraint_time = GetConstraintTime(current.position, stopping_constraint_map);
-            if (constraint_time.has_value() && current.time_step < constraint_time.value())
+            if (GetConstraintTime(current.position, stopping_constraints).has_value() && current.time_step < GetConstraintTime(current.position, stopping_constraints).value())
             {
-                std::vector<State> neighbors = GetNeighbors(current, goal, grid, vertex_constraint_map, edge_constraint_map, stopping_constraint_map, following_constraint_map);
+                std::vector<State> neighbors = GetNeighbors(current, goal, grid, vertex_constraints, edge_constraints, following_constraints, stopping_constraints);
 
-                for (const auto &neighbor : neighbors)
+                for (auto &neighbor : neighbors)
                 {
+                    if (neighbor.direction == STAY)
+                        neighbor.direction = current.direction;
                     int rotation_cost_value = RotationCost(current.direction, neighbor.direction);
-                    int move_cost = 1;
+                    int move_cost = (current.position == neighbor.position) ? 1 : 2;
                     int final_g_cost = g_costs[current] + rotation_cost_value + move_cost;
                     State final_state = neighbor;
 
@@ -209,12 +169,14 @@ std::vector<std::vector<int>> AStarAlgorithm(
             return path;
         }
 
-        std::vector<State> neighbors = GetNeighbors(current, goal, grid, vertex_constraint_map, edge_constraint_map, stopping_constraint_map, following_constraint_map);
+        std::vector<State> neighbors = GetNeighbors(current, goal, grid, vertex_constraints, edge_constraints, following_constraints, stopping_constraints);
 
-        for (const auto &neighbor : neighbors)
+        for (auto &neighbor : neighbors)
         {
+            if (neighbor.direction == STAY)
+                neighbor.direction = current.direction;
             int rotation_cost_value = RotationCost(current.direction, neighbor.direction);
-            int move_cost = 1;
+            int move_cost = (current.position == neighbor.position) ? 1 : 2;
             int final_g_cost = g_costs[current] + rotation_cost_value + move_cost;
             State final_state = neighbor;
 

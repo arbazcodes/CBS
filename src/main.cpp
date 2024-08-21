@@ -6,13 +6,13 @@ int main()
     // Define starting and goal positions for agents
     std::vector<Pair> starts = {
         {0, 1},
-        {0, 2},
+        {1, 1},
         {2, 0},
-        {2, 1}};
+        {0, 0}};
     std::vector<Pair> goals = {
-        {0, 0},
-        {1, 0},
-        {1, 2},
+        {1, 1},
+        {2, 1},
+        {0, 2},
         {2, 2}};
 
     // Define constraints (empty in this case)
